@@ -1,0 +1,5 @@
+test_path: /g/data/tm70/ml0072/COMMON/git_repos/access-experiment-generator/prototype-0.1.0
+repository_directory: 1deg_jra55_ryf
+running_branches: [ctrl, perturb_1, perturb_2]
+keep_uuid: True
+nruns: [1,1,1]
