@@ -1,0 +1,25 @@
+[project]
+name = "experiment-runner"
+version = "0.1.0"
+description = "A tool to run parameter sensitivity experiments."
+authors = [
+  { name = "Minghang Li", email = "Minghang.Li1@anu.edu.au" }
+]
+readme = "README.md"
+keywords = ["experiment runner", "workflow", "payu"]
+license = { text = "Apache-2.0" }
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: Utilities",
+]
+# As payu is pre-installed (via modules), this can be omitted.
+dependencies = []
+
+[project.scripts]
+experiment-runner = "experiment_runner.main:main"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
