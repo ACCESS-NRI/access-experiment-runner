@@ -36,30 +36,44 @@ def output_existing_pbs_jobs() -> dict:
     with open(current_job_status_path, "r", encoding="utf-8") as f:
         pbs_job_file = f.read()
 
+    def _flush_pair():
+        nonlocal current_key, current_value, job_id
+        if current_key and job_id:
+            pbs_jobs[job_id][current_key] = current_value.strip()
+            current_key = None
+            current_value = ""
+
     pbs_job_file = pbs_job_file.replace("\t", "        ")
 
     for line in pbs_job_file.splitlines():
         line = line.rstrip()
         if not line:
+            _flush_pair()
             continue
+
         if line.startswith("Job Id:"):
+            _flush_pair()
             job_id = line.split(":", 1)[1].strip()
             pbs_jobs[job_id] = {}
-            current_key = None
-            current_value = ""
-        elif line.startswith("        ") and current_key:  # 8 indents multi-line
+            continue
+
+        if line.startswith("        ") and current_key:  # 8 indents multi-line
             current_value += line.strip()
-        elif line.startswith("    ") and " = " in line:  # 4 indents for new pair
+            continue
+
+        if line.startswith("    ") and " = " in line:  # 4 indents for new pair
             # Save the previous multi-line value
-            if current_key:
-                pbs_jobs[job_id][current_key] = current_value.strip()
+            _flush_pair()
             key, value = line.split(" = ", 1)  # save key
             current_key = key.strip()
             current_value = value.strip()
+            continue
+
+    # end of file, flush last pair
+    _flush_pair()
 
     # Clean up the temporary file: `current_job_status`
     current_job_status_path.unlink()
-
     return pbs_jobs
 
 
