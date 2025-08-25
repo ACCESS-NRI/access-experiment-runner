@@ -37,7 +37,7 @@ def output_existing_pbs_jobs() -> dict:
         pbs_job_file = f.read()
 
     def _flush_pair():
-        nonlocal current_key, current_value, job_id
+        nonlocal current_key, current_value
         if current_key and job_id:
             pbs_jobs[job_id][current_key] = current_value.strip()
             current_key = None
@@ -136,9 +136,7 @@ class PBSJobManager:
         duplicated = False
 
         for _, job_info in pbs_jobs.items():
-            folder_path, parent_path = _extract_current_and_parent_path(
-                job_info["Error_Path"]
-            )
+            folder_path, parent_path = _extract_current_and_parent_path(job_info["Error_Path"])
             job_state = job_info["job_state"]
             if job_state not in ("F", "S"):
                 if parent_path not in parent_paths:
@@ -178,10 +176,7 @@ class PBSJobManager:
             subprocess.run(command, shell=True, check=True)
             print("\n")
         else:
-            print(
-                f"-- `{Path(*path.parts[-2:])}` already completed "
-                f"{doneruns} runs, hence no new runs.\n"
-            )
+            print(f"-- `{Path(*path.parts[-2:])}` already completed " f"{doneruns} runs, hence no new runs.\n")
 
     def _clean_workspace(self, path: Path) -> None:
         """

@@ -74,9 +74,7 @@ def test_main_uses_default_yaml_when_present(tmp_path, monkeypatch):
     assert called["indata"]["keep_uuid"] is True
 
 
-def test_main_errors_when_no_yaml_provided_and_default_missing(
-    tmp_path, monkeypatch, capsys
-):
+def test_main_errors_when_no_yaml_provided_and_default_missing(tmp_path, monkeypatch, capsys):
     monkeypatch.chdir(tmp_path)
 
     monkeypatch.setattr(sys, "argv", ["prog"])

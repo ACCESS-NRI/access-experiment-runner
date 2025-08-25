@@ -148,9 +148,7 @@ def patch_runner(monkeypatch, tmp_path, payu_calls, pbs_job_recorder):
     """
     monkeypatch.setattr(exp_runner, "clone", _dummy_clone, raising=True)
     monkeypatch.setattr(exp_runner, "list_branches", _dummy_list_branches, raising=True)
-    monkeypatch.setattr(
-        exp_runner, "PBSJobManager", lambda: pbs_job_recorder, raising=True
-    )
+    monkeypatch.setattr(exp_runner, "PBSJobManager", lambda: pbs_job_recorder, raising=True)
 
     class _Exc:
         class GitCommandError(Exception):

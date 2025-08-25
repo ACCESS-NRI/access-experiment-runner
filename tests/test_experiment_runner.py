@@ -16,9 +16,7 @@ def test_error_when_no_running_branches(indata, monkeypatch, patch_runner):
         er.run()
 
 
-def test_update_existing_repo_creates_branch_if_missing(
-    tmp_path, indata, monkeypatch, patch_runner
-):
+def test_update_existing_repo_creates_branch_if_missing(tmp_path, indata, monkeypatch, patch_runner):
     for branch in indata["running_branches"]:
         dir_path = tmp_path / "tests" / branch / indata["repository_directory"]
         dir_path.mkdir(parents=True, exist_ok=True)
@@ -42,9 +40,7 @@ def test_update_existing_repo_creates_branch_if_missing(
     assert len(patch_runner.pbs.calls) == 2
 
 
-def test_update_existing_repo_already_up_to_date(
-    tmp_path, indata, monkeypatch, patch_runner, capsys
-):
+def test_update_existing_repo_already_up_to_date(tmp_path, indata, monkeypatch, patch_runner, capsys):
     for branch in indata["running_branches"]:
         dir_path = tmp_path / "tests" / branch / indata["repository_directory"]
         dir_path.mkdir(parents=True, exist_ok=True)
@@ -112,16 +108,8 @@ def test_run_clones_and_runs_jobs(indata, monkeypatch, patch_runner):
 
     assert len(patch_runner.payu.clone_calls) == len(indata["running_branches"])
 
-    expt1 = (
-        Path(indata["test_path"])
-        / indata["running_branches"][0]
-        / indata["repository_directory"]
-    )
-    expt2 = (
-        Path(indata["test_path"])
-        / indata["running_branches"][1]
-        / indata["repository_directory"]
-    )
+    expt1 = Path(indata["test_path"]) / indata["running_branches"][0] / indata["repository_directory"]
+    expt2 = Path(indata["test_path"]) / indata["running_branches"][1] / indata["repository_directory"]
     assert patch_runner.pbs.calls == [(expt1, 1), (expt2, 2)]
 
 
@@ -151,9 +139,7 @@ def test_run_existing_dirs_update_success(tmp_path, indata, monkeypatch, patch_r
     assert len(patch_runner.pbs.calls) == 2
 
 
-def test_run_existing_dirs_pull_failure_uses_reset(
-    tmp_path, indata, monkeypatch, patch_runner
-):
+def test_run_existing_dirs_pull_failure_uses_reset(tmp_path, indata, monkeypatch, patch_runner):
 
     for branch in indata["running_branches"]:
         dir_path = tmp_path / "tests" / branch / indata["repository_directory"]
