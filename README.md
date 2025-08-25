@@ -7,13 +7,15 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 ## About
-The main role of the ACCESS experiment runner is to manage and monitor experiment job runs on the supercomputing environment (e.g., `Gadi`), offering automatic handling of success, failure, and duplicate run scenarios.
+The main role of the ACCESS experiment runner is to manage and monitor experiment job runs on the supercomputing environment (e.g., `Gadi`). It builds on `Payu`, handling the orchestration of multiple configuration branches, experiment setup, and job lifecycle.
 
 ## Key features
-Submits and tracks PBS jobs on Gadi; oversees job lifecycle from submission through completion.
-- When a job completes within expected run times, the tool prints a confirmation and stops further submissions.
-- If a job fails, users may choose to inspect the working directory to diagnose the root cause. The tool will detect the failure and pause further actions, giving the user control over whether to resubmit.
-- Detects already running or queued jobs and avoids redundant submissions—quickly skips duplicates with a user notification.
+- Leverages `Payu` and run multiple experiments from different configuration branches.
+
+- Submits and tracks PBS jobs on `Gadi`; oversees job lifecycle from submission through completion.
+  - When a job completes within expected run times, the tool prints a confirmation and stops further submissions.
+  - If a job fails, users may choose to inspect the working directory to diagnose the root cause. The tool will detect the failure and pause further actions, giving the user control over whether to resubmit.
+  - Detects already running or queued jobs and avoids redundant submissions—quickly skips duplicates with a user notification.
 
 ## Installation
 ### User setup
