@@ -1,5 +1,3 @@
-from pathlib import Path
-import pytest
 from experiment_runner.pbs_job_manager import output_existing_pbs_jobs
 from experiment_runner.pbs_job_manager import (
     _extract_current_and_parent_path,
@@ -33,15 +31,9 @@ def test_output_existing_pbs_jobs_parses_jobs_correctly(tmp_path, monkeypatch):
     jobs = output_existing_pbs_jobs()
 
     assert "123.gadi" in jobs and "999.gadi" in jobs
-    assert (
-        jobs["123.gadi"]["Error_Path"]
-        == "gadi.nci.org.au:/g/data/group/parentA/expA/job.e123"
-    )
+    assert jobs["123.gadi"]["Error_Path"] == "gadi.nci.org.au:/g/data/group/parentA/expA/job.e123"
     assert jobs["123.gadi"]["job_state"] == "R"
-    assert (
-        jobs["999.gadi"]["Error_Path"]
-        == "gadi.nci.org.au:/g/data/group/parentB/expB/job.e999"
-    )
+    assert jobs["999.gadi"]["Error_Path"] == "gadi.nci.org.au:/g/data/group/parentB/expB/job.e999"
     assert jobs["999.gadi"]["job_state"] == "Q"
     assert not (tmp_path / "current_job_status").exists()
 
@@ -80,12 +72,8 @@ def test_pbs_job_runs_not_duplicated(tmp_path, monkeypatch):
     def dummy_start(self, path, nruns, duplicated):
         called["args"] = (path, nruns, duplicated)
 
-    monkeypatch.setattr(
-        PBSJobManager, "_check_duplicated_jobs", dummy_check, raising=True
-    )
-    monkeypatch.setattr(
-        PBSJobManager, "_start_experiment_runs", dummy_start, raising=True
-    )
+    monkeypatch.setattr(PBSJobManager, "_check_duplicated_jobs", dummy_check, raising=True)
+    monkeypatch.setattr(PBSJobManager, "_start_experiment_runs", dummy_start, raising=True)
 
     pbs_job_manager = PBSJobManager()
     pbs_job_manager.pbs_job_runs(current_path, nruns=3)
@@ -118,12 +106,8 @@ def test_pbs_job_runs_with_duplicated(tmp_path, monkeypatch):
     def dummy_start(self, path, nruns, duplicated):
         called_start["args"] = (path, nruns, duplicated)
 
-    monkeypatch.setattr(
-        PBSJobManager, "_check_duplicated_jobs", dummy_check, raising=True
-    )
-    monkeypatch.setattr(
-        PBSJobManager, "_start_experiment_runs", dummy_start, raising=True
-    )
+    monkeypatch.setattr(PBSJobManager, "_check_duplicated_jobs", dummy_check, raising=True)
+    monkeypatch.setattr(PBSJobManager, "_start_experiment_runs", dummy_start, raising=True)
 
     pbs_job_manager = PBSJobManager()
     pbs_job_manager.pbs_job_runs(current_path, nruns=2)
@@ -131,9 +115,7 @@ def test_pbs_job_runs_with_duplicated(tmp_path, monkeypatch):
     assert called_start["args"] == (current_path, 2, True)
 
 
-def test_start_experiment_runs_return_early_if_duplicated(
-    tmp_path, monkeypatch, capsys
-):
+def test_start_experiment_runs_return_early_if_duplicated(tmp_path, monkeypatch, capsys):
     pbs_job_manager = PBSJobManager()
     current_path = tmp_path / "parentA" / "expA"
     current_path.mkdir(parents=True, exist_ok=True)
