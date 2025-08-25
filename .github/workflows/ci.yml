@@ -26,8 +26,7 @@ jobs:
       - name: flake8
         uses: py-actions/flake8@v2
         with:
-          max-line-length: "120"
-          extend-ignore: "E203"
+          args: "--extend-ignore=E203 --max-line-length=120"
 
   pypa-build:
     name: PyPA build
