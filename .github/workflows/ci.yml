@@ -1,0 +1,105 @@
+name: CI
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  PY_VERSION_BUILD: 3.12
+
+jobs:
+  formatting:
+    name: Code formatting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: black
+        uses: psf/black@stable
+        with:
+          options: "--check --verbose --diff"
+          src: "./src/experiment_runner ./tests"
+
+      - name: flake8
+        uses: py-actions/flake8@v2
+        with:
+          max-line-length: "120"
+
+  pypa-build:
+    name: PyPA build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PY_VERSION_BUILD }}
+          cache: 'pip' # caching pip dependencies
+
+      - run: |
+          python3 -m pip install --upgrade build && python3 -m build
+    
+  conda-build:
+    name: Conda Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup conda environment
+        uses: conda-incubator/setup-miniconda@835234971496cad1653abb28a638a281cf32541f # v3.2.0
+        with:
+          miniconda-version: "latest"
+          python-version: ${{ env.PY_VERSION_BUILD }}
+          environment-file: conda/environment.yml
+          auto-update-conda: false
+          auto-activate-base: false
+          show-channel-urls: true
+
+      - name: Build conda package
+        uses: ACCESS-NRI/action-build-and-upload-conda-packages@v3.0.0
+        with:
+          meta_yaml_dir: conda
+          label: main
+          upload: false
+
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+
+    # Run the job for different versions of python
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install '.[devel,test,access]'
+
+      - name: Run tests with coverage
+        run: |
+          python3 -m pytest -s \
+            --cov=experiment_runner \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage.xml \
+            tests
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+         token: ${{ secrets.CODECOV_TOKEN }}
+         files: ./coverage.xml

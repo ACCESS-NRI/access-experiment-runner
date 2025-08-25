@@ -1,12 +1,12 @@
 [project]
 name = "experiment-runner"
-version = "0.1.0"
-description = "A tool to run parameter sensitivity experiments."
+dynamic = ["version"]
+description = "A tool to orchestrate branch-based workflows and automate job submission for ACCESS experiments."
 authors = [
   { name = "Minghang Li", email = "Minghang.Li1@anu.edu.au" }
 ]
 readme = "README.md"
-keywords = ["experiment runner", "workflow", "payu"]
+keywords = ["experiment runner", "workflow", "access", "payu"]
 license = { text = "Apache-2.0" }
 classifiers = [
     "License :: OSI Approved :: Apache Software License",
@@ -14,12 +14,51 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Topic :: Utilities",
 ]
-# As payu is pre-installed (via modules), this can be omitted.
-dependencies = []
+
+dependencies = [
+  "ruamel.yaml",
+  "f90nml"
+]
+
+[build-system]
+requires = ["setuptools>=80", "setuptools_scm[toml]>=8", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [project.scripts]
 experiment-runner = "experiment_runner.main:main"
 
-[build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+[project.urls]
+Homepage = "https://github.com/ACCESS-NRI/access-experiment-runner"
+
+[project.optional-dependencies]
+devel = [
+    "flake8",
+    "black",
+    "pre-commit",
+]
+test = [
+    "pytest",
+    "pytest-cov",
+]
+
+access = ["payu"]
+
+[tool.pytest.ini_options]
+addopts = [
+  "--cov=experiment_runner",
+  "--cov-report=term",
+  "--cov-report=html",
+  "--cov-report=xml"
+]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+
+[tool.black]
+line-length = 120
+
+[tool.flake8]
+max-line-length = 120
