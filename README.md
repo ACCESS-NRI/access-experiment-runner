@@ -66,19 +66,38 @@ test_path: /g/data/{PROJECT}/{USER}/prototype-0.1.0
 repository_directory: 1deg_jra55_ryf
 running_branches: [ctrl, perturb_1, perturb_2]
 keep_uuid: True
-nruns: [1,1,1]
+running_branches: # List of experiment branches to run.
+  - ctrl
+  - perturb_1
+  - perturb_2
+
+nruns: # Number of runs for each branch; must match the order of running_branches.
+  - 2
+  - 0
+  - 0
+
+# Starting point for each branch. Options include:
+#   cold: start from scratch (cold start).
+#   control/restartXXX: start from a specific control run restart index.
+#   perturb/restartXXX: start from a specific perturbation run restart index.
+startfrom_restart:
+  - cold
+  - cold
+  - cold
 ```
 where,
 
-`test_path`: The base path to the experiment repository on the filesystem. In this case, it points to a prototype experiment runner checkout.
+`test_path`: All control and perturbation experiment repositories.
 
-`repository_directory`: The specific experiment configuration directory inside test_path. Here it is the `1deg_jra55_ryf` setup.
+`repository_directory`: Local directory name for the central repository, where the `running_branches` are forked from.
 
 `running_branches`: A list of git branches representing experiments to run.
 
 `keep_uuid`: Preserve unique identifiers (UUIDs) across runs.
 
-`nruns`: A list indicating how many runs to perform for each branch listed in running_branches.
+`nruns`: A list indicating how many runs to perform for each branch listed in `running_branches`.
+
+`startfrom_restart`: Starting point for each branch.
 
 ## Workflow example
 1. Trigger the experiment
