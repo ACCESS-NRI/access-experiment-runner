@@ -1,5 +1,62 @@
-test_path: /g/data/tm70/ml0072/COMMON/git_repos/access-experiment-generator/prototype-0.1.0
-repository_directory: 1deg_jra55_ryf
-running_branches: [ctrl, perturb_1, perturb_2]
+test_path: /g/data/tm70/ml0072/demonstrations/2025_08_29.access-training-workshop/prototype-0.1.0 # All control and perturbation experiment repositories.
+repository_directory: 1deg_jra55_ryf # Local directory name for the central repository, where the running_branches are forked from.
 keep_uuid: True
-nruns: [1,1,1]
+running_branches: # List of experiment branches to run.
+  - ctrl
+  - perturb_1
+  - perturb_2
+
+nruns: # Number of runs for each branch; must match the order of running_branches.
+  - 2
+  - 0
+  - 0
+
+# Starting point for each branch. Options include:
+#   cold: start from scratch (cold start).
+#   control/restartXXX: start from a specific control run restart index.
+#   perturb/restartXXX: start from a specific perturbation run restart index.
+startfrom_restart:
+  - cold
+  - cold
+  - cold
+
+# after the above, there will be two archive/outputxxx and archive/restartxxx directories created:
+# .
+# ├── metadata.yaml
+# ├── output000
+# ├── output001
+# ├── restart000
+# └── restart001
+#
+# Suppose we now want perturb_1 to start from the first restart of ctrl and perturb_2 to start from the second restart of ctrl.
+# Both perturb_1 and perturb_2 will run 2 times each.
+# Since nruns for ctrl is still set to 2 and those runs have already been completed in the above settings.
+# the ctrl branch will not run again with a prompt message on the terminal
+# -- `ctrl/1deg_jra55_ryf` already completed 2 runs, hence no new runs.
+#
+# nruns:
+#   - 2
+#   - 2
+#   - 2
+#
+# startfrom_restart:
+#   - cold
+#   - ctrl/restart000
+#   - ctrl/restart001
+# after this in perturb_1/1deg_jra55_ryf/archive
+# .
+# ├── metadata.yaml
+# ├── output001
+# ├── output002
+# ├── restart000 -> /scratch/tm70/ml0072/access-om2/archive/1deg_jra55_ryf-ctrl-eae202ee/restart000
+# ├── restart001
+# └── restart002
+#
+# similarly in perturb_2/1deg_jra55_ryf/archive
+# .
+# ├── metadata.yaml
+# ├── output002
+# ├── output003
+# ├── restart001 -> /scratch/tm70/ml0072/access-om2/archive/1deg_jra55_ryf-ctrl-eae202ee/restart001
+# ├── restart002
+# └── restart003

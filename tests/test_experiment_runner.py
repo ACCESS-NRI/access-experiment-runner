@@ -162,3 +162,126 @@ def test_run_existing_dirs_pull_failure_uses_reset(tmp_path, indata, monkeypatch
     exp_runner.ExperimentRunner(indata).run()
 
     assert len(patch_runner.pbs.calls) == 2
+
+
+def _repo_dir(base_test_path: Path, branch: str, repo_dirname: str) -> Path:
+    """
+    test_path / branch / repo_dirname
+    """
+    d = Path(base_test_path) / branch / repo_dirname
+    (d / "archive").mkdir(parents=True, exist_ok=True)
+    (d / "work").mkdir(parents=True, exist_ok=True)
+    (d / "config.yaml").write_text("queue: normalsr\n")
+    return d
+
+
+def test_parse_restart_entry_restart_path(tmp_path, indata):
+    er = exp_runner.ExperimentRunner(indata)
+    restart_mode, src_branch, restart_tag = er._parse_restart_entry("ctrl/restart000")
+    assert restart_mode == "restart"
+    assert src_branch == "ctrl"
+    assert restart_tag == "restart000"
+
+
+def test_resolve_restart_tag_nonlist_raises(indata):
+
+    indata["startfrom_restart"] = "cold"
+    er = exp_runner.ExperimentRunner(indata)
+    with pytest.raises(TypeError):
+        er._resolve_restart_tag(branch="perturb_1", indx=1)
+
+
+def test_generate_restart_symlinks_for_branch_creates_then_skips_when_valid(indata):
+    indata["running_branches"] = ["ctrl", "perturb_1"]
+    indata["nruns"] = [0, 0]
+    indata["startfrom_restart"] = ["cold", "ctrl/restart001"]
+
+    er = exp_runner.ExperimentRunner(indata)
+    ctrl_repo = _repo_dir(er.test_path, "ctrl", er.repository_directory)
+    src_restart = ctrl_repo / "archive" / "restart001"
+    src_restart.mkdir(parents=True, exist_ok=True)
+    (src_restart / "dummy_restart.nc").write_text("test")
+
+    # Now create the symlink for perturb_1
+    perturb_repo = _repo_dir(er.test_path, "perturb_1", er.repository_directory)
+
+    # first create
+    out_source_restart_path = er._generate_restart_symlinks_for_branch(perturb_repo, "perturb_1", 1)
+    assert out_source_restart_path == src_restart
+    dest_restart = perturb_repo / "archive" / "restart001"
+    assert dest_restart.is_symlink()
+    assert dest_restart.resolve() == src_restart
+
+    # second call should skip as already valid
+    er._generate_restart_symlinks_for_branch(perturb_repo, "perturb_1", 1)
+    assert dest_restart.is_symlink()
+    assert dest_restart.resolve() == src_restart
+
+
+def test_generate_restart_symlinks_for_branch_replace_broken_link(indata):
+    indata["running_branches"] = ["ctrl", "perturb_1"]
+    indata["nruns"] = [0, 0]
+    indata["startfrom_restart"] = ["cold", "ctrl/restart001"]
+
+    er = exp_runner.ExperimentRunner(indata)
+
+    ctrl_repo = _repo_dir(er.test_path, "ctrl", er.repository_directory)
+    src_restart = ctrl_repo / "archive" / "restart001"
+    src_restart.mkdir(parents=True, exist_ok=True)
+    (src_restart / "dummy_restart.nc").write_text("test")
+
+    # Now create the symlink for perturb_1
+    perturb_repo = _repo_dir(er.test_path, "perturb_1", er.repository_directory)
+    dest_restart = perturb_repo / "archive" / "restart001"
+    broken_target = ctrl_repo / "archive" / "restart_broken"
+    dest_restart.symlink_to(broken_target)  # broken link
+    assert dest_restart.is_symlink() and not dest_restart.exists()
+
+    # fix/replace broken link
+    er._generate_restart_symlinks_for_branch(perturb_repo, "perturb_1", 1)
+    assert dest_restart.is_symlink()
+    assert dest_restart.exists()
+    assert dest_restart.resolve() == src_restart
+
+
+def test_generate_restart_symlinks_for_branch_raises_when_missing_source(indata):
+    indata["running_branches"] = ["ctrl", "perturb_1"]
+    indata["nruns"] = [0, 0]
+    indata["startfrom_restart"] = ["cold", "ctrl/restart001"]
+
+    er = exp_runner.ExperimentRunner(indata)
+
+    # only create ctrl repo, but not the restart dir
+    _repo_dir(er.test_path, "ctrl", er.repository_directory)
+
+    # Now create the symlink for perturb_1
+    perturb_repo = _repo_dir(er.test_path, "perturb_1", er.repository_directory)
+
+    with pytest.raises(FileNotFoundError):
+        er._generate_restart_symlinks_for_branch(perturb_repo, "perturb_1", 1)
+
+
+def test_generate_restart_symlinks_for_branch_raises_when_empty_source(indata):
+    # no restart files in restart dir
+    indata["running_branches"] = ["ctrl", "perturb_1"]
+    indata["nruns"] = [0, 0]
+    indata["startfrom_restart"] = ["cold", "ctrl/restart001"]
+
+    er = exp_runner.ExperimentRunner(indata)
+
+    ctrl_repo = _repo_dir(er.test_path, "ctrl", er.repository_directory)
+    src_restart = ctrl_repo / "archive" / "restart001"
+    src_restart.mkdir(parents=True, exist_ok=True)
+
+    perturb_repo = _repo_dir(er.test_path, "perturb_1", er.repository_directory)
+
+    with pytest.raises(FileNotFoundError):
+        er._generate_restart_symlinks_for_branch(perturb_repo, "perturb_1", 1)
+
+
+def test_resolve_restart_tag_list_length_mismatch(indata):
+    indata["startfrom_restart"] = ["cold"]
+
+    er = exp_runner.ExperimentRunner(indata)
+    with pytest.raises(ValueError):
+        er._resolve_restart_tag(branch="perturb_1", indx=1)

@@ -22,7 +22,8 @@ class ExperimentRunner(BaseExperiment):
         self._print_branches_available()
         all_cloned_directories = self._create_cloned_directory()
 
-        for expt, nrun in zip(all_cloned_directories, self.nruns):
+        for indx, (expt, branch, nrun) in enumerate(zip(all_cloned_directories, self.running_branches, self.nruns)):
+            self._generate_restart_symlinks_for_branch(expt, branch, indx)
             self.pbsjobmanager.pbs_job_runs(expt, nrun)
 
     def _print_branches_available(self):
@@ -110,3 +111,71 @@ class ExperimentRunner(BaseExperiment):
         except git.exc.GitCommandError as e:
             print(f"Failed updating existing repo {rel_path}: {e}")
             return False
+
+    def _generate_restart_symlinks_for_branch(self, expt_path: Path, branch: str, indx: int) -> None:
+        """
+        Create symlink:
+        <branch>/<repo>/archive/<restart_tag>  ->  <src_branch>/<repo>/archive/<restart_tag>
+        when mode == 'restart'. For 'cold' do nothing.
+        """
+        restart_mode, src_branch, restart_tag = self._resolve_restart_tag(branch, indx)
+
+        if restart_mode == "cold":
+            print(f"-- {branch} Starting from cold start.")
+            return
+
+        # restart dir
+        source_restart_path = (
+            Path(self.test_path) / src_branch / self.repository_directory / "archive" / restart_tag
+        ).resolve()
+
+        # check if source restart path exists and contains restart files
+        if not source_restart_path.exists() or not source_restart_path.is_dir():
+            raise FileNotFoundError(f"-- Source restart path does not exist: {source_restart_path}")
+
+        if not any(source_restart_path.iterdir()):
+            raise FileNotFoundError(f"-- Source restart path is empty in {source_restart_path}")
+
+        # restart dir symlink for this branch
+        dest_restart_path = expt_path / "archive" / restart_tag
+
+        needs_update = not dest_restart_path.is_symlink() or (
+            dest_restart_path.is_symlink() and not dest_restart_path.exists()
+        )
+
+        if needs_update:
+            if dest_restart_path.exists() or dest_restart_path.is_symlink():
+                dest_restart_path.unlink()
+                print(f"-- Removed old restart symlink: {dest_restart_path}")
+            dest_restart_path.symlink_to(source_restart_path)
+            print(f"-- Created restart symlink: {dest_restart_path} -> {source_restart_path}")
+
+        else:
+            print(f"-- Restart symlink already exists and is valid: {dest_restart_path}")
+
+        return source_restart_path
+
+    def _resolve_restart_tag(self, branch: str, indx: int) -> str:
+        """
+        Return the restart tag to a per-branch (restart_mode, src_branch, restart_tag).
+        """
+        s = self.startfrom_restart
+        if isinstance(s, list):
+            if len(s) != len(self.running_branches):
+                raise ValueError("startfrom_restart list length must match running_branches.")
+            return self._parse_restart_entry(s[indx])
+        else:
+            raise TypeError("startfrom_restart must be list[str, str, str]!")
+
+    def _parse_restart_entry(self, entry: str) -> tuple[str, str, str]:
+        """
+        Returns a tuple (restart_mode, src_branch, restart_tag)
+        restart_mode: 'cold' | 'restart'
+        src_branch: branch name providing the restart files
+        restart_tag: restartxxx, suchas restart000
+        """
+        if entry == "cold":
+            return ("cold", None, None)
+
+        src_branch, restart_tag = entry.split("/", 1)
+        return ("restart", src_branch, restart_tag)

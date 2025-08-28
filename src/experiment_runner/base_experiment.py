@@ -21,3 +21,4 @@ class BaseExperiment:
         self.restart_path = indata.get("restart_path", None)
         self.start_point = indata.get("start_point", None)
         self.parent_experiment = indata.get("parent_experiment", None)
+        self.startfrom_restart: list[str] = indata.get("startfrom_restart", ["cold"])
