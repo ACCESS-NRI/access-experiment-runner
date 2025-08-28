@@ -181,4 +181,5 @@ def indata(tmp_path: Path) -> dict:
         "running_branches": ["perturb_1", "perturb_2"],
         "nruns": [1, 2],
         "keep_uuid": True,
+        "startfrom_restart": ["cold", "cold"],
     }
