@@ -80,8 +80,6 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
-
-
       - name: Dispatch deploy workflow in model-release-condaenv
         run: |
           # Dispatch the deploy_payu_dev.yml workflow from the ACCESS-NRI/model-release-condaenv repo
