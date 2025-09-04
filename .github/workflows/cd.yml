@@ -70,3 +70,23 @@ jobs:
           label: main
           token: ${{ secrets.ANACONDA_TOKEN }}
 
+  deploy-payu-dev:
+    name: Deploy payu-dev environment
+    needs: [pypi-publish, conda]
+    if: github.repository == 'ACCESS-NRI/access-experiment-runner' && startsWith(github.ref, 'refs/tags/v')  # exclude forks
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.MODEL_RELEASE_CONDAENV_WORKFLOW_DISPATCH_TOKEN }}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install GitHub CLI
+        uses: cli/cli-action@v2
+
+      - name: Dispatch deploy workflow in model-release-condaenv
+        run: |
+          # Dispatch the deploy_payu_dev.yml workflow from the ACCESS-NRI/model-release-condaenv repo
+          gh workflow run deploy_payu_dev.yml \
+            --repo ACCESS-NRI/model-release-condaenv \
+            --ref main
