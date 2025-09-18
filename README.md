@@ -11,7 +11,7 @@ The main role of the ACCESS experiment runner is to manage and monitor experimen
 
 ## Key features
 - Leverages `Payu` and run multiple experiments from different configuration branches.
-
+- Supports updating parameters even after branches have been created, eliminating the need to delete and recreate entire branches when corrections are required.
 - Submits and tracks PBS jobs on `Gadi`; oversees job lifecycle from submission through completion.
   - When a job completes within expected run times, the tool prints a confirmation and stops further submissions.
   - If a job fails, users may choose to inspect the working directory to diagnose the root cause. The tool will detect the failure and pause further actions, giving the user control over whether to resubmit.
