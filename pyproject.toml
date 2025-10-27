@@ -17,7 +17,8 @@ classifiers = [
 
 dependencies = [
   "ruamel.yaml",
-  "f90nml"
+  "f90nml",
+  "payu"
 ]
 
 [build-system]
@@ -43,8 +44,6 @@ test = [
     "pytest",
     "pytest-cov",
 ]
-
-access = ["payu"]
 
 [tool.pytest.ini_options]
 addopts = [
