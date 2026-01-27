@@ -189,6 +189,6 @@ class PBSJobManager:
         # in case any failed job
         if work_dir.is_symlink() and work_dir.is_dir():
             # Payu sweep && setup to ensure the changes correctly && remove the `work` directory
-            command = "payu sweep && payu setup"
+            command = f"cd {path} && payu sweep && payu setup"
             subprocess.run(command, shell=True, check=False)
             print(f"Clean up a failed job {work_dir} and prepare it for resubmission.")
