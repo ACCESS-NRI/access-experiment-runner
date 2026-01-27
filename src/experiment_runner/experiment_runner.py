@@ -215,12 +215,9 @@ class ExperimentRunner(BaseExperiment):
 
             print(f"-- Dry_run {dry_run}; Purge: {branch}: {' '.join(cmd)} in {expt_path}")
             if not dry_run:
-                try:
-                    subprocess.run(cmd, cwd=expt_path, check=True, text=True)
-                    if hard:
-                        shutil.rmtree(expt_path.parent)
-                except subprocess.CalledProcessError as e:
-                    print(f"Error during purge of {branch}: {e}")
+                subprocess.run(cmd, cwd=expt_path, check=True, text=True)
+                if hard:
+                    shutil.rmtree(expt_path.parent)
 
     def _assert_safe_under_test_path(self, path: Path) -> None:
         """

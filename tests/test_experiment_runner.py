@@ -285,3 +285,106 @@ def test_resolve_restart_tag_list_length_mismatch(indata):
     er = exp_runner.ExperimentRunner(indata)
     with pytest.raises(ValueError):
         er._resolve_restart_tag(branch="perturb_1", indx=1)
+
+
+def test_purge_experiments_dry_run(tmp_path, indata, monkeypatch, capsys):
+    er = exp_runner.ExperimentRunner(indata)
+
+    for branch in indata["running_branches"]:
+        expt_path = Path(er.test_path) / branch / er.repository_directory
+        expt_path.mkdir(parents=True, exist_ok=True)
+
+    calls = []
+
+    def dummy_run(cmd, cwd, check, text):
+        calls.append((cmd, cwd, check, text))
+
+    monkeypatch.setattr(exp_runner.subprocess, "run", dummy_run, raising=True)
+
+    # should not call subprocess.run when dry_run=True
+    er.purge_experiments(dry_run=True)
+
+    assert calls == []
+
+    # for normal run
+    er.purge_experiments(dry_run=False)
+
+    assert len(calls) == len(indata["running_branches"])
+
+    for (cmd, cwd, check, text), branch in zip(calls, indata["running_branches"]):
+        expected_path = Path(er.test_path) / branch / er.repository_directory
+        assert cmd == ["payu", "sweep"]
+        assert cwd == expected_path
+        assert check is True
+        assert text is True
+
+
+def test_purge_experiments_hard(tmp_path, indata, monkeypatch, capsys):
+    er = exp_runner.ExperimentRunner(indata)
+
+    for branch in indata["running_branches"]:
+        expt_path = Path(er.test_path) / branch / er.repository_directory
+        expt_path.mkdir(parents=True, exist_ok=True)
+
+    removed = []
+
+    def dummy_run(*args, **kwargs):
+        return 0
+
+    monkeypatch.setattr(exp_runner.subprocess, "run", dummy_run, raising=True)
+
+    def dummy_rmtree(path):
+        removed.append(Path(path))
+
+    monkeypatch.setattr(exp_runner.shutil, "rmtree", dummy_rmtree, raising=True)
+    er.purge_experiments(hard=True, dry_run=False)
+
+    # hard purge should remove parent dirs of experiment dirs
+    expected = [Path(er.test_path) / branch for branch in indata["running_branches"]]
+    assert removed == expected
+
+
+def test_purge_experiments_no_running_branches_raises(indata):
+    indata["running_branches"] = []
+    er = exp_runner.ExperimentRunner(indata)
+    with pytest.raises(ValueError):
+        er.purge_experiments()
+
+
+def test_purge_experiments_branch_does_not_exist(tmp_path, indata, monkeypatch, capsys):
+    er = exp_runner.ExperimentRunner(indata)
+
+    # only create one of the experiment dirs
+    branch = indata["running_branches"][0]
+    expt_path = Path(er.test_path) / branch / er.repository_directory
+    expt_path.mkdir(parents=True, exist_ok=True)
+
+    calls = []
+
+    def dummy_run(cmd, cwd, check, text):
+        calls.append((cmd, cwd, check, text))
+
+    monkeypatch.setattr(exp_runner.subprocess, "run", dummy_run, raising=True)
+
+    er.purge_experiments(dry_run=False)
+
+    out = capsys.readouterr().out
+    assert "Experiment path does not exist, skipping purge" in out
+
+    # only one existing branch should have been processed
+    assert len(calls) == 1
+
+
+def test_assert_safe_under_test_path_raises_on_unsafe_path(indata):
+    er = exp_runner.ExperimentRunner(indata)
+    unsafe_path = Path("/etc/passwd")
+    with pytest.raises(ValueError):
+        er._assert_safe_under_test_path(unsafe_path)
+
+
+def test_assert_safe_under_test_path_passes_on_safe_path(indata, tmp_path):
+    er = exp_runner.ExperimentRunner(indata)
+    safe_path = tmp_path / "tests" / indata["running_branches"][0] / indata["repository_directory"]
+    safe_path.mkdir(parents=True, exist_ok=True)
+    # should not raise
+    er._assert_safe_under_test_path(safe_path)
