@@ -233,7 +233,7 @@ class ExperimentRunner(BaseExperiment):
         self._assert_safe_under_test_path(self.base_directory)
 
         still_used = any(
-            (Path(self.test_path) / branch / self.repository_directory).exists() for branch in target_branches
+            (Path(self.test_path) / branch / self.repository_directory).exists() for branch in self.running_branches
         )
 
         if still_used:
