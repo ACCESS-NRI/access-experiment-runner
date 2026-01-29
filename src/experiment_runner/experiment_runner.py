@@ -187,6 +187,7 @@ class ExperimentRunner(BaseExperiment):
         branches: list[str] = None,
         hard: bool = False,
         dry_run: bool = False,
+        remove_repo_dir: bool = False,
     ) -> None:
         """
         Purges generated experiments similarly to `payu sweep --hard` or `payu sweep`.
@@ -195,6 +196,7 @@ class ExperimentRunner(BaseExperiment):
             branches (list[str] | None): List of branches to purge. If None, purges all running branches.
             hard (bool | False): If True, performs a hard purge removing all files. Defaults to False.
             dry_run (bool | False): If True, only simulates the purge without deleting files. Defaults to False.
+            remove_repo_dir (bool | False): If True, removes the base repository directory if no branches are using it.
         """
         target_branches = branches or list(self.running_branches or [])
         if not target_branches:
@@ -218,6 +220,31 @@ class ExperimentRunner(BaseExperiment):
                 subprocess.run(cmd, cwd=expt_path, check=True, text=True)
                 if hard:
                     shutil.rmtree(expt_path.parent)
+
+        # remove base repository directory if no branches are using it
+        if not (hard and remove_repo_dir):
+            return
+
+        # check if the repository directory still exists
+        if not self.base_directory.exists():
+            print(f"-- Repository directory does not exist, skipping removal: {self.base_directory}")
+            return
+
+        self._assert_safe_under_test_path(self.base_directory)
+
+        still_used = False
+        for branch in target_branches:
+            branch_repo = Path(self.test_path) / branch / self.repository_directory
+            if branch_repo.exists():
+                still_used = True
+                break
+
+        if still_used:
+            print(f"-- Repository directory still in use by other branches, not removing: {self.base_directory}")
+            return
+
+        shutil.rmtree(self.base_directory)
+        print(f"-- Removed repository directory: {self.base_directory}")
 
     def _assert_safe_under_test_path(self, path: Path) -> None:
         """
