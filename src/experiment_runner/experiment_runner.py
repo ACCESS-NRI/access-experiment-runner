@@ -232,19 +232,18 @@ class ExperimentRunner(BaseExperiment):
 
         self._assert_safe_under_test_path(self.base_directory)
 
-        still_used = False
-        for branch in target_branches:
-            branch_repo = Path(self.test_path) / branch / self.repository_directory
-            if branch_repo.exists():
-                still_used = True
-                break
+        still_used = any(
+            (Path(self.test_path) / branch / self.repository_directory).exists() for branch in target_branches
+        )
 
         if still_used:
             print(f"-- Repository directory still in use by other branches, not removing: {self.base_directory}")
             return
 
-        shutil.rmtree(self.base_directory)
-        print(f"-- Removed repository directory: {self.base_directory}")
+        print(f"-- Dry run {dry_run}; Removing repository directory: {self.base_directory}")
+        if not dry_run:
+            shutil.rmtree(self.base_directory)
+            print(f"-- Removed repository directory: {self.base_directory}")
 
     def _assert_safe_under_test_path(self, path: Path) -> None:
         """
