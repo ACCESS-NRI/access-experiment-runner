@@ -1,5 +1,6 @@
 from pathlib import Path
 import pytest
+import shutil
 import experiment_runner.experiment_runner as exp_runner
 
 
@@ -388,3 +389,120 @@ def test_assert_safe_under_test_path_passes_on_safe_path(indata, tmp_path):
     safe_path.mkdir(parents=True, exist_ok=True)
     # should not raise
     er._assert_safe_under_test_path(safe_path)
+
+
+def test_purge_remove_repo_dir_not_touch_base(tmp_path, indata, monkeypatch, capsys):
+    er = exp_runner.ExperimentRunner(indata)
+
+    for branch in indata["running_branches"]:
+        expt_path = Path(er.test_path) / branch / er.repository_directory
+        expt_path.mkdir(parents=True, exist_ok=True)
+
+    base_repo_dir = er.base_directory
+    base_repo_dir.mkdir(parents=True, exist_ok=True)
+
+    monkeypatch.setattr(exp_runner.subprocess, "run", lambda *args, **kwargs: 0, raising=True)
+
+    real_rmtree = exp_runner.shutil.rmtree
+
+    def fail_rmtree(path):
+        p = Path(path).resolve()
+        if p == base_repo_dir.resolve():
+            raise AssertionError(f"base_directory should not be removed, but rmtree({path}) was called")
+        return real_rmtree(path)
+
+    monkeypatch.setattr(exp_runner.shutil, "rmtree", fail_rmtree, raising=True)
+
+    # hard=False
+    er.purge_experiments(hard=False, dry_run=False, remove_repo_dir=True)
+
+    # remove_repo_dir=False
+    er.purge_experiments(hard=True, dry_run=False, remove_repo_dir=False)
+
+    assert base_repo_dir.exists()
+
+
+def test_purge_remove_repo_dir_removes_base_missing_skips(tmp_path, indata, monkeypatch, capsys):
+    er = exp_runner.ExperimentRunner(indata)
+
+    base_repo_dir = er.base_directory
+    base_repo_dir.mkdir(parents=True, exist_ok=True)
+
+    # ensure base_directory is removed
+    if er.base_directory.exists():
+        shutil.rmtree(er.base_directory)
+
+    monkeypatch.setattr(exp_runner.subprocess, "run", lambda *args, **kwargs: 0, raising=True)
+
+    er.purge_experiments(hard=True, dry_run=False, remove_repo_dir=True)
+
+    out = capsys.readouterr().out
+    assert "Repository directory does not exist, skipping removal" in out
+
+
+def test_purge_remove_repo_dir_still_used_not_remove_base(tmp_path, indata, monkeypatch, capsys):
+    er = exp_runner.ExperimentRunner(indata)
+
+    base_repo_dir = er.base_directory
+    base_repo_dir.mkdir(parents=True, exist_ok=True)
+
+    for branch in indata["running_branches"]:
+        expt_path = Path(er.test_path) / branch / er.repository_directory
+        expt_path.mkdir(parents=True, exist_ok=True)
+
+    monkeypatch.setattr(exp_runner.subprocess, "run", lambda *args, **kwargs: 0, raising=True)
+
+    def fail_rmtree(path):
+        raise AssertionError(f"base_directory should not be removed when still_used, got rmtree({path})")
+
+    monkeypatch.setattr(exp_runner.shutil, "rmtree", fail_rmtree, raising=True)
+
+    # dry_run=True means branch dirs are not removed, so base dir is still used
+    er.purge_experiments(hard=True, dry_run=True, remove_repo_dir=True)
+
+    out = capsys.readouterr().out
+    assert "Repository directory still in use by other branches, not removing" in out
+    assert base_repo_dir.exists()
+
+
+def test_purge_remove_repo_dir_dry_run_skips_removal(tmp_path, indata, monkeypatch, capsys):
+    er = exp_runner.ExperimentRunner(indata)
+
+    base_repo_dir = er.base_directory
+    base_repo_dir.mkdir(parents=True, exist_ok=True)
+
+    monkeypatch.setattr(exp_runner.subprocess, "run", lambda *args, **kwargs: 0, raising=True)
+
+    def fail_rmtree(path):
+        raise AssertionError("Should not delete base_directory on dry_run=True")
+
+    monkeypatch.setattr(exp_runner.shutil, "rmtree", fail_rmtree, raising=True)
+
+    er.purge_experiments(hard=True, dry_run=True, remove_repo_dir=True)
+
+    out = capsys.readouterr().out
+    assert "Dry run True; Removing repository directory" in out
+    assert er.base_directory.exists()
+
+
+def test_purge_remove_repo_dir_dry_run_false_removes_base(tmp_path, indata, monkeypatch, capsys):
+    er = exp_runner.ExperimentRunner(indata)
+
+    base_repo_dir = er.base_directory
+    base_repo_dir.mkdir(parents=True, exist_ok=True)
+
+    removed = []
+    real_rmtree = exp_runner.shutil.rmtree
+
+    def dummy_rmtree(path):
+        removed.append(Path(path))
+        real_rmtree(path)
+
+    monkeypatch.setattr(exp_runner.shutil, "rmtree", dummy_rmtree, raising=True)
+
+    er.purge_experiments(hard=True, dry_run=False, remove_repo_dir=True)
+
+    out = capsys.readouterr().out
+    assert f"-- Removed repository directory: {er.base_directory}" in out
+    assert str(er.base_directory) in [str(p) for p in removed]
+    assert not er.base_directory.exists()
