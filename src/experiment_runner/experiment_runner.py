@@ -232,8 +232,9 @@ class ExperimentRunner(BaseExperiment):
 
         self._assert_safe_under_test_path(self.base_directory)
 
+        branches_to_check = list(self.running_branches or [])
         still_used = any(
-            (Path(self.test_path) / branch / self.repository_directory).exists() for branch in self.running_branches
+            (Path(self.test_path) / branch / self.repository_directory).exists() for branch in branches_to_check
         )
 
         if still_used:
