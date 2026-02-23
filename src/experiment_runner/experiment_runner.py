@@ -185,6 +185,7 @@ class ExperimentRunner(BaseExperiment):
     def purge_experiments(
         self,
         branches: list[str] = None,
+        all_branches: bool = False,
         hard: bool = False,
         dry_run: bool = False,
         remove_repo_dir: bool = False,
@@ -193,12 +194,19 @@ class ExperimentRunner(BaseExperiment):
         Purges generated experiments similarly to `payu sweep --hard` or `payu sweep`.
 
         Parameters:
-            branches (list[str] | None): List of branches to purge. If None, purges all running branches.
+            branches (list[str] | None): List of branches to purge.
+            all_branches (bool | False): If True, purges all known branches.
             hard (bool | False): If True, performs a hard purge removing all files. Defaults to False.
             dry_run (bool | False): If True, only simulates the purge without deleting files. Defaults to False.
             remove_repo_dir (bool | False): If True, removes the base repository directory if no branches are using it.
         """
-        target_branches = branches or list(self.running_branches or [])
+        if all_branches and branches is not None:
+            raise ValueError("Pass either branches=[...] or all_branches=True")
+
+        if not all_branches and not branches:
+            raise ValueError("No branches specified for purge! Pass either branches=[...] or all_branches=True")
+
+        target_branches = list(self.running_branches or []) if all_branches else list(branches or [])
         if not target_branches:
             raise ValueError("No branches specified for purge and no running_branches available.")
 
