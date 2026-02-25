@@ -288,7 +288,7 @@ def test_resolve_restart_tag_list_length_mismatch(indata):
         er._resolve_restart_tag(branch="perturb_1", indx=1)
 
 
-def test_purge_experiments_dry_run(tmp_path, indata, monkeypatch, capsys):
+def test_delete_experiments_dry_run(tmp_path, indata, monkeypatch, capsys):
     er = exp_runner.ExperimentRunner(indata)
 
     for branch in indata["running_branches"]:
@@ -303,12 +303,12 @@ def test_purge_experiments_dry_run(tmp_path, indata, monkeypatch, capsys):
     monkeypatch.setattr(exp_runner.subprocess, "run", dummy_run, raising=True)
 
     # should not call subprocess.run when dry_run=True
-    er.purge_experiments(all_branches=True, dry_run=True)
+    er.delete_experiments(all_branches=True, dry_run=True)
 
     assert calls == []
 
     # for normal run
-    er.purge_experiments(all_branches=True, dry_run=False)
+    er.delete_experiments(all_branches=True, dry_run=False)
 
     assert len(calls) == len(indata["running_branches"])
 
@@ -320,7 +320,7 @@ def test_purge_experiments_dry_run(tmp_path, indata, monkeypatch, capsys):
         assert text is True
 
 
-def test_purge_experiments_hard(tmp_path, indata, monkeypatch, capsys):
+def test_delete_experiments_hard(tmp_path, indata, monkeypatch, capsys):
     er = exp_runner.ExperimentRunner(indata)
 
     for branch in indata["running_branches"]:
@@ -338,21 +338,21 @@ def test_purge_experiments_hard(tmp_path, indata, monkeypatch, capsys):
         removed.append(Path(path))
 
     monkeypatch.setattr(exp_runner.shutil, "rmtree", dummy_rmtree, raising=True)
-    er.purge_experiments(all_branches=True, hard=True, dry_run=False)
+    er.delete_experiments(all_branches=True, hard=True, dry_run=False)
 
-    # hard purge should remove parent dirs of experiment dirs
+    # hard delete should remove parent dirs of experiment dirs
     expected = [Path(er.test_path) / branch for branch in indata["running_branches"]]
     assert removed == expected
 
 
-def test_purge_experiments_no_running_branches_raises(indata):
+def test_delete_experiments_no_running_branches_raises(indata):
     indata["running_branches"] = []
     er = exp_runner.ExperimentRunner(indata)
     with pytest.raises(ValueError):
-        er.purge_experiments(all_branches=True)
+        er.delete_experiments(all_branches=True)
 
 
-def test_purge_experiments_branch_does_not_exist(tmp_path, indata, monkeypatch, capsys):
+def test_delete_experiments_branch_does_not_exist(tmp_path, indata, monkeypatch, capsys):
     er = exp_runner.ExperimentRunner(indata)
 
     # only create one of the experiment dirs
@@ -367,10 +367,10 @@ def test_purge_experiments_branch_does_not_exist(tmp_path, indata, monkeypatch, 
 
     monkeypatch.setattr(exp_runner.subprocess, "run", dummy_run, raising=True)
 
-    er.purge_experiments(all_branches=True, dry_run=False)
+    er.delete_experiments(all_branches=True, dry_run=False)
 
     out = capsys.readouterr().out
-    assert "Experiment path does not exist, skipping purge" in out
+    assert "Experiment path does not exist, skipping delete" in out
 
     # only one existing branch should have been processed
     assert len(calls) == 1
@@ -391,7 +391,7 @@ def test_assert_safe_under_test_path_passes_on_safe_path(indata, tmp_path):
     er._assert_safe_under_test_path(safe_path)
 
 
-def test_purge_remove_repo_dir_not_touch_base(tmp_path, indata, monkeypatch, capsys):
+def test_delete_remove_repo_dir_not_touch_base(tmp_path, indata, monkeypatch, capsys):
     er = exp_runner.ExperimentRunner(indata)
 
     for branch in indata["running_branches"]:
@@ -414,15 +414,15 @@ def test_purge_remove_repo_dir_not_touch_base(tmp_path, indata, monkeypatch, cap
     monkeypatch.setattr(exp_runner.shutil, "rmtree", fail_rmtree, raising=True)
 
     # hard=False
-    er.purge_experiments(all_branches=True, hard=False, dry_run=False, remove_repo_dir=True)
+    er.delete_experiments(all_branches=True, hard=False, dry_run=False, remove_repo_dir=True)
 
     # remove_repo_dir=False
-    er.purge_experiments(all_branches=True, hard=True, dry_run=False, remove_repo_dir=False)
+    er.delete_experiments(all_branches=True, hard=True, dry_run=False, remove_repo_dir=False)
 
     assert base_repo_dir.exists()
 
 
-def test_purge_remove_repo_dir_removes_base_missing_skips(tmp_path, indata, monkeypatch, capsys):
+def test_delete_remove_repo_dir_removes_base_missing_skips(tmp_path, indata, monkeypatch, capsys):
     er = exp_runner.ExperimentRunner(indata)
 
     base_repo_dir = er.base_directory
@@ -434,13 +434,13 @@ def test_purge_remove_repo_dir_removes_base_missing_skips(tmp_path, indata, monk
 
     monkeypatch.setattr(exp_runner.subprocess, "run", lambda *args, **kwargs: 0, raising=True)
 
-    er.purge_experiments(all_branches=True, hard=True, dry_run=False, remove_repo_dir=True)
+    er.delete_experiments(all_branches=True, hard=True, dry_run=False, remove_repo_dir=True)
 
     out = capsys.readouterr().out
     assert "Repository directory does not exist, skipping removal" in out
 
 
-def test_purge_remove_repo_dir_still_used_not_remove_base(tmp_path, indata, monkeypatch, capsys):
+def test_delete_remove_repo_dir_still_used_not_remove_base(tmp_path, indata, monkeypatch, capsys):
     er = exp_runner.ExperimentRunner(indata)
 
     base_repo_dir = er.base_directory
@@ -458,14 +458,14 @@ def test_purge_remove_repo_dir_still_used_not_remove_base(tmp_path, indata, monk
     monkeypatch.setattr(exp_runner.shutil, "rmtree", fail_rmtree, raising=True)
 
     # dry_run=True means branch dirs are not removed, so base dir is still used
-    er.purge_experiments(all_branches=True, hard=True, dry_run=True, remove_repo_dir=True)
+    er.delete_experiments(all_branches=True, hard=True, dry_run=True, remove_repo_dir=True)
 
     out = capsys.readouterr().out
     assert "Repository directory still in use by other branches, not removing" in out
     assert base_repo_dir.exists()
 
 
-def test_purge_remove_repo_dir_dry_run_skips_removal(tmp_path, indata, monkeypatch, capsys):
+def test_delete_remove_repo_dir_dry_run_skips_removal(tmp_path, indata, monkeypatch, capsys):
     er = exp_runner.ExperimentRunner(indata)
 
     base_repo_dir = er.base_directory
@@ -478,14 +478,14 @@ def test_purge_remove_repo_dir_dry_run_skips_removal(tmp_path, indata, monkeypat
 
     monkeypatch.setattr(exp_runner.shutil, "rmtree", fail_rmtree, raising=True)
 
-    er.purge_experiments(all_branches=True, hard=True, dry_run=True, remove_repo_dir=True)
+    er.delete_experiments(all_branches=True, hard=True, dry_run=True, remove_repo_dir=True)
 
     out = capsys.readouterr().out
     assert "Dry run True; Removing repository directory" in out
     assert er.base_directory.exists()
 
 
-def test_purge_remove_repo_dir_dry_run_false_removes_base(tmp_path, indata, monkeypatch, capsys):
+def test_delete_remove_repo_dir_dry_run_false_removes_base(tmp_path, indata, monkeypatch, capsys):
     er = exp_runner.ExperimentRunner(indata)
 
     base_repo_dir = er.base_directory
@@ -500,7 +500,7 @@ def test_purge_remove_repo_dir_dry_run_false_removes_base(tmp_path, indata, monk
 
     monkeypatch.setattr(exp_runner.shutil, "rmtree", dummy_rmtree, raising=True)
 
-    er.purge_experiments(all_branches=True, hard=True, dry_run=False, remove_repo_dir=True)
+    er.delete_experiments(all_branches=True, hard=True, dry_run=False, remove_repo_dir=True)
 
     out = capsys.readouterr().out
     assert f"-- Removed repository directory: {er.base_directory}" in out
@@ -508,22 +508,22 @@ def test_purge_remove_repo_dir_dry_run_false_removes_base(tmp_path, indata, monk
     assert not er.base_directory.exists()
 
 
-def test_purge_experiments_requires_explicit_purge(indata):
-    """Refuse implicit purge"""
+def test_delete_experiments_requires_explicit_delete(indata):
+    """Refuse implicit delete"""
     er = exp_runner.ExperimentRunner(indata)
     with pytest.raises(ValueError):
-        er.purge_experiments()
+        er.delete_experiments()
 
 
-def test_purge_experiments_rejects_branches_and_all_branches(indata):
+def test_delete_experiments_rejects_branches_and_all_branches(indata):
     """Refuse both branches and all_branches=True"""
     er = exp_runner.ExperimentRunner(indata)
     with pytest.raises(ValueError):
-        er.purge_experiments(branches=["ctrl"], all_branches=True)
+        er.delete_experiments(branches=["ctrl"], all_branches=True)
 
 
-def test_purge_experiments_explicit_branches_works_without_running_branches(tmp_path, indata, monkeypatch):
-    """Purge explicit branches doesn’t require running_branches"""
+def test_delete_experiments_explicit_branches_works_without_running_branches(tmp_path, indata, monkeypatch):
+    """delete explicit branches doesn't require running_branches"""
     indata["running_branches"] = []
     er = exp_runner.ExperimentRunner(indata)
 
@@ -537,7 +537,7 @@ def test_purge_experiments_explicit_branches_works_without_running_branches(tmp_
         exp_runner.subprocess, "run", lambda cmd, cwd, check, text: calls.append((cmd, cwd, check, text)), raising=True
     )
 
-    er.purge_experiments(branches=[branch], dry_run=False)
+    er.delete_experiments(branches=[branch], dry_run=False)
 
     assert len(calls) == 1
     cmd, cwd, check, text = calls[0]

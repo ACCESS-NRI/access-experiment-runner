@@ -182,7 +182,7 @@ class ExperimentRunner(BaseExperiment):
         src_branch, restart_tag = entry.split("/", 1)
         return ("restart", src_branch, restart_tag)
 
-    def purge_experiments(
+    def delete_experiments(
         self,
         branches: list[str] = None,
         all_branches: bool = False,
@@ -191,30 +191,30 @@ class ExperimentRunner(BaseExperiment):
         remove_repo_dir: bool = False,
     ) -> None:
         """
-        Purges generated experiments similarly to `payu sweep --hard` or `payu sweep`.
+        Deletes generated experiments using `payu sweep --hard` or
+        cleans run artefacts while keeping the experiment directory intact using `payu sweep`.
 
         Parameters:
-            branches (list[str] | None): List of branches to purge.
-            all_branches (bool | False): If True, purges all known branches.
-            hard (bool | False): If True, performs a hard purge removing all files. Defaults to False.
-            dry_run (bool | False): If True, only simulates the purge without deleting files. Defaults to False.
+            branches (list[str] | None): List of branches to delete.
+            all_branches (bool | False): If True, deletes all known branches.
+            hard (bool | False): If True, performs a hard delete removing all files. Defaults to False.
+            dry_run (bool | False): If True, only simulates the delete without deleting files. Defaults to False.
             remove_repo_dir (bool | False): If True, removes the base repository directory if no branches are using it.
         """
         if all_branches and branches is not None:
             raise ValueError("Pass either branches=[...] or all_branches=True")
 
         if not all_branches and not branches:
-            raise ValueError("No branches specified for purge! Pass either branches=[...] or all_branches=True")
+            raise ValueError("No branches specified for delete! Pass either branches=[...] or all_branches=True")
 
         target_branches = list(self.running_branches or []) if all_branches else list(branches or [])
         if not target_branches:
-            raise ValueError("No branches specified for purge and no running_branches available.")
-
+            raise ValueError("No branches specified for delete and no running_branches available.")
         experiment_paths = [Path(self.test_path) / branch / self.repository_directory for branch in target_branches]
 
         for expt_path, branch in zip(experiment_paths, target_branches):
             if not expt_path.exists():
-                print(f"-- Experiment path does not exist, skipping purge: {expt_path}")
+                print(f"-- Experiment path does not exist, skipping delete: {expt_path}")
                 continue
 
             self._assert_safe_under_test_path(expt_path)
@@ -223,7 +223,7 @@ class ExperimentRunner(BaseExperiment):
             if hard:
                 cmd.append("--hard")
 
-            print(f"-- Dry_run {dry_run}; Purge: {branch}: {' '.join(cmd)} in {expt_path}")
+            print(f"-- Dry_run {dry_run}; Delete: {branch}: {' '.join(cmd)} in {expt_path}")
             if not dry_run:
                 subprocess.run(cmd, cwd=expt_path, check=True, text=True)
                 if hard:
@@ -269,5 +269,5 @@ class ExperimentRunner(BaseExperiment):
             target_path.relative_to(test_path)
         except ValueError as e:
             raise ValueError(
-                f"Refuse to purge outside test_path. test_path: {test_path}, target_path: {target_path}"
+                f"Refuse to delete outside test_path. test_path: {test_path}, target_path: {target_path}"
             ) from e
