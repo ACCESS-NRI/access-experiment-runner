@@ -4,7 +4,7 @@
 site_name: access-experiment-runner
 
 # Site URL
-site_url: !ENV READTHEDOCS_CANONICAL_URL
+site_url: !ENV [READTHEDOCS_CANONICAL_URL, https://access-experiment-runner.hive-docs.org.au/]
 
 # Git repository (Adds a link to the GitHub repository at the top)
 repo_url: https://github.com/ACCESS-NRI/access-experiment-runner

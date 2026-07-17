@@ -9,6 +9,9 @@
 ## About
 The main role of the ACCESS experiment runner is to manage and monitor experiment job runs on the supercomputing environment (e.g., `Gadi`). It builds on `Payu`, handling the orchestration of multiple configuration branches, experiment setup, and job lifecycle.
 
+## Documentation
+The ACCESS experient runner documentation can be found at: https://access-experiment-runner.hive-docs.org.au/
+
 ## Key features
 - Leverages `Payu` and run multiple experiments from different configuration branches.
 - Supports updating parameters even after branches have been created, eliminating the need to delete and recreate entire branches when corrections are required.
