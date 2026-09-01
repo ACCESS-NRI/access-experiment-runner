@@ -53,7 +53,7 @@ class ExperimentRunner(BaseExperiment):
 
     def _do_clone(self, clone_dir: Path, branch: str):
         clone(
-            repository=self.base_directory,
+            repository=str(self.base_directory),
             directory=clone_dir,
             branch=branch,
             keep_uuid=self.keep_uuid,

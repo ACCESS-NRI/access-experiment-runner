@@ -103,7 +103,7 @@ def _dummy_clone(repository, directory: str, branch, **kwargs):
 
     _PAYU_CALLS.clone_calls.append(
         {
-            "repository": str(repository),
+            "repository": repository,
             "directory": str(directory),
             "branch": branch,
             "kwargs": kwargs,
