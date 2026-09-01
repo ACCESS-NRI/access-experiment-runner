@@ -108,6 +108,7 @@ def test_run_clones_and_runs_jobs(indata, monkeypatch, patch_runner):
     exp_runner.ExperimentRunner(indata).run()
 
     assert len(patch_runner.payu.clone_calls) == len(indata["running_branches"])
+    assert all(isinstance(call["repository"], str) for call in patch_runner.payu.clone_calls)
 
     expt1 = Path(indata["test_path"]) / indata["running_branches"][0] / indata["repository_directory"]
     expt2 = Path(indata["test_path"]) / indata["running_branches"][1] / indata["repository_directory"]
