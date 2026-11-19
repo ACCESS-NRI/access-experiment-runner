@@ -102,6 +102,16 @@ where,
 
 `startfrom_restart`: Starting point for each branch.
 
+### Experiments generated with `use_worktrees`
+If the experiment generator ran with `use_worktrees: true`, each perturbation branch already has its own directory at
+`<test_path>/<branch>/<repository_directory>`. That directory is a git worktree of the repository in
+`<test_path>/<repository_directory>`. The runner uses these directories as they are. It doesn't clone them, and it
+doesn't fetch or pull, because the generator commits to them directly. Branches without a worktree, such as the control
+branch, are cloned as before.
+
+For worktree branches, the experiment UUID comes from the generator's `keep_uuid` and `new_uuid` settings. The runner's
+`keep_uuid` only applies to the branches it clones.
+
 ## Workflow example
 1. Trigger the experiment
 ```

@@ -41,7 +41,17 @@ class ExperimentRunner(BaseExperiment):
         all_cloned_directories = [Path(self.test_path) / b / self.repository_directory for b in self.running_branches]
 
         for clone_dir, branch in zip(all_cloned_directories, self.running_branches):
-            if clone_dir.exists():
+            worktree_head = self._base_worktree_head(clone_dir)
+            if worktree_head is not None:
+                # made by the experiment generator with `use_worktrees`: it shares its branches
+                # with the base repository, so there is nothing to clone, fetch or pull
+                if worktree_head != f"ref: refs/heads/{branch}":
+                    raise RuntimeError(
+                        f"{clone_dir} is a worktree of {self.base_directory}, but its HEAD is "
+                        f"'{worktree_head}' instead of branch '{branch}'."
+                    )
+                print(f"-- Test dir: {clone_dir} is a worktree of {self.base_directory}, using it as it is.")
+            elif clone_dir.exists():
                 print(f"-- Test dir: {clone_dir} already exists, skipping cloning.")
                 if not self._update_existing_repo(clone_dir, branch):
                     print(f"Failed to update existing repo {clone_dir}, leaving as it is.")
@@ -50,6 +60,26 @@ class ExperimentRunner(BaseExperiment):
                 self._do_clone(clone_dir, branch)
 
         return all_cloned_directories
+
+    def _base_worktree_head(self, directory: Path) -> str | None:
+        """
+        If `directory` is a git worktree of the base repository, return its HEAD (for example
+        `ref: refs/heads/perturb_1`), otherwise None.
+
+        A worktree has a `.git` file pointing to `<base>/.git/worktrees/<name>`, where git keeps its HEAD.
+        """
+        dotgit = directory / ".git"
+        if not dotgit.is_file():
+            return None
+
+        gitdir_line = dotgit.read_text().strip()
+        if not gitdir_line.startswith("gitdir:"):
+            return None
+        gitdir = (directory / gitdir_line.removeprefix("gitdir:").strip()).resolve()
+
+        if gitdir.parent.name != "worktrees" or gitdir.parent.parent != (self.base_directory / ".git").resolve():
+            return None
+        return (gitdir / "HEAD").read_text().strip()
 
     def _do_clone(self, clone_dir: Path, branch: str):
         clone(
@@ -71,6 +101,7 @@ class ExperimentRunner(BaseExperiment):
         Updates the repo without removing the dir or untracked files
         target_ref: branch to checkout
         """
+        rel_path = clone_dir.relative_to(self.test_path)
 
         try:
             repo = git.Repo(str(clone_dir))
@@ -94,8 +125,6 @@ class ExperimentRunner(BaseExperiment):
 
             # save new HEAD after update
             new_commit = repo.head.commit.hexsha
-
-            rel_path = clone_dir.relative_to(self.test_path)
 
             if current_commit == new_commit:
                 print(f"-- Repo {rel_path} is already up to date with {target_ref}.")
@@ -212,6 +241,7 @@ class ExperimentRunner(BaseExperiment):
             raise ValueError("No branches specified for delete and no running_branches available.")
         experiment_paths = [Path(self.test_path) / branch / self.repository_directory for branch in target_branches]
 
+        removed_worktree = False
         for expt_path, branch in zip(experiment_paths, target_branches):
             if not expt_path.exists():
                 print(f"-- Experiment path does not exist, skipping delete: {expt_path}")
@@ -227,7 +257,12 @@ class ExperimentRunner(BaseExperiment):
             if not dry_run:
                 subprocess.run(cmd, cwd=expt_path, check=True, text=True)
                 if hard:
+                    removed_worktree = removed_worktree or self._base_worktree_head(expt_path) is not None
                     shutil.rmtree(expt_path.parent)
+
+        # make the base repository forget the worktrees whose directories were removed
+        if removed_worktree:
+            subprocess.run(["git", "worktree", "prune"], cwd=self.base_directory, check=True, text=True)
 
         # remove base repository directory if no branches are using it
         if not (hard and remove_repo_dir):
@@ -249,10 +284,37 @@ class ExperimentRunner(BaseExperiment):
             print(f"-- Repository directory still in use by other branches, not removing: {self.base_directory}")
             return
 
+        # worktrees of branches not in running_branches still need the git repository in the base directory
+        other_worktrees = self._other_worktrees()
+        if other_worktrees:
+            print(f"-- Repository directory still in use by other worktrees, not removing: {self.base_directory}")
+            for worktree in other_worktrees:
+                print(f"   -- {worktree}")
+            return
+
         print(f"-- Dry run {dry_run}; Removing repository directory: {self.base_directory}")
         if not dry_run:
             shutil.rmtree(self.base_directory)
             print(f"-- Removed repository directory: {self.base_directory}")
+
+    def _other_worktrees(self) -> list[Path]:
+        """
+        Worktrees that share the git repository of the base directory, other than the base directory itself.
+        """
+        if not (self.base_directory / ".git").is_dir():
+            return []
+
+        listing = subprocess.run(
+            ["git", "worktree", "list", "--porcelain"],
+            cwd=self.base_directory,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+        worktrees = [
+            Path(line.removeprefix("worktree ")) for line in listing.splitlines() if line.startswith("worktree ")
+        ]
+        return [worktree for worktree in worktrees if worktree.resolve() != self.base_directory.resolve()]
 
     def _assert_safe_under_test_path(self, path: Path) -> None:
         """

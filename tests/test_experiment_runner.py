@@ -104,6 +104,27 @@ def test_update_existing_repo_outer_except_returns_false_and_caller_prints(
     assert "Failed to update existing repo" in out or "leaving as it is" in out
 
 
+def test_update_existing_repo_returns_false_when_pull_and_reset_fail(tmp_path, indata, monkeypatch, patch_runner):
+    clone_dir = tmp_path / "tests" / "perturb_1" / indata["repository_directory"]
+    clone_dir.mkdir(parents=True)
+    base_fac = patch_runner.make_repo
+
+    def make_repo(path):
+        repo = base_fac(path)
+        repo.heads["perturb_1"] = True
+        repo._pull_raises = True
+
+        def raise_gitcmderror(*args, **kwargs):
+            raise repo._exc.GitCommandError("no such remote branch")
+
+        repo.git.reset = raise_gitcmderror
+        return repo
+
+    monkeypatch.setattr(exp_runner.git, "Repo", make_repo, raising=True)
+
+    assert exp_runner.ExperimentRunner(indata)._update_existing_repo(clone_dir, "perturb_1") is False
+
+
 def test_run_clones_and_runs_jobs(indata, monkeypatch, patch_runner):
     exp_runner.ExperimentRunner(indata).run()
 
